@@ -233,6 +233,10 @@ public class WifiConfigManager {
     @VisibleForTesting
     protected static final String NON_PERSISTENT_MAC_RANDOMIZATION_FEATURE_FORCE_ENABLE_FLAG =
             "non_persistent_mac_randomization_force_enabled";
+
+    @VisibleForTesting
+    protected static final String BAIKALOS_RESET_PERSISTENT_MAC_FLAG = "baikalos_reset_persistent_mac";
+
     private static final int NON_CARRIER_MERGED_NETWORKS_SCAN_CACHE_QUERY_DURATION_MS =
             10 * 60 * 1000; // 10 minutes
 
@@ -478,6 +482,21 @@ public class WifiConfigManager {
             return true;
         }
 
+        //if (mFrameworkFacade.getIntegerSetting(mContext,
+          //      BAIKALOS_RESET_PERSISTENT_MAC_FLAG, 0) == 1) {
+
+            //Log.e(TAG, "Force randomized MAC renewal");
+
+            //mFrameworkFacade.setIntegerSetting(mContext,
+            //    BAIKALOS_RESET_PERSISTENT_MAC_FLAG, 0);
+
+            //return true;
+        //}
+
+        /*if( baikalOverrideNonPersistentRandomization(config.SSID) ) {
+            return true;
+        }*/
+
         // use non-persistent or persistent randomization if configured to do so.
         if (config.macRandomizationSetting == WifiConfiguration.RANDOMIZATION_NON_PERSISTENT) {
             return true;
@@ -493,12 +512,30 @@ public class WifiConfigManager {
         if (config.isOpenNetwork() && shouldEnableNonPersistentRandomizationOnOpenNetwork(config)) {
             return true;
         }
+
         if (config.isPasspoint()) {
             return isNetworkOptInForNonPersistentRandomization(config.FQDN);
         } else {
             return isNetworkOptInForNonPersistentRandomization(config.SSID);
         }
     }
+
+    /*private boolean baikalOverrideNonPersistentRandomization(String SSID) {
+
+        final ContentResolver resolver = mContext.getContentResolver();
+        final boolean result = Settings.Global.getInt(resolver,
+                "baikalos_reset_persistent_mac", 0) != 0;
+
+        Log.e(TAG, "Force randomized MAC renewal :" + result);
+
+        if( result ) {
+            Settings.Global.putInt(resolver,
+                "baikalos_reset_persistent_mac", 0);
+        }
+        return result;
+    }*/
+
+
 
     private boolean shouldEnableNonPersistentRandomizationOnOpenNetwork(WifiConfiguration config) {
         if (!mDeviceConfigFacade.allowNonPersistentMacRandomizationOnOpenSsids()
@@ -549,8 +586,27 @@ public class WifiConfigManager {
                 config.getNetworkKey());
         // Use the MAC address stored in the storage if it exists and is valid. Otherwise
         // use the MAC address calculated from a hash function as the persistent MAC.
+                 
+        boolean force = false;
+
+        if (mFrameworkFacade.getIntegerSetting(mContext,
+                BAIKALOS_RESET_PERSISTENT_MAC_FLAG, 0) == 1) {
+
+            Log.e(TAG, "Force randomized MAC renewal");
+
+            mFrameworkFacade.setIntegerSetting(mContext,
+                BAIKALOS_RESET_PERSISTENT_MAC_FLAG, 0);
+
+            if (persistentMacString != null) {
+                mRandomizedMacAddressMapping.remove(config.getNetworkKey());
+                persistentMacString = null;
+            }
+            force = true;
+        }
+
         if (persistentMacString != null) {
             try {
+                Log.e(TAG, "Previous randomized MAC " + persistentMacString + " for " + config.getNetworkKey());
                 return MacAddress.fromString(persistentMacString);
             } catch (IllegalArgumentException e) {
                 Log.e(TAG, "Error creating randomized MAC address from stored value.");
@@ -558,11 +614,13 @@ public class WifiConfigManager {
             }
         }
         MacAddress result = mMacAddressUtil.calculatePersistentMac(config.getNetworkKey(),
-                mMacAddressUtil.obtainMacRandHashFunction(Process.WIFI_UID));
+                mMacAddressUtil.obtainMacRandHashFunction(Process.WIFI_UID, force));
+
         if (result == null) {
             result = mMacAddressUtil.calculatePersistentMac(config.getNetworkKey(),
-                    mMacAddressUtil.obtainMacRandHashFunction(Process.WIFI_UID));
+                    mMacAddressUtil.obtainMacRandHashFunction(Process.WIFI_UID, force));
         }
+
         if (result == null) {
             Log.wtf(TAG, "Failed to generate MAC address from KeyStore even after retrying. "
                     + "Using locally generated MAC address instead.");
@@ -571,6 +629,9 @@ public class WifiConfigManager {
                 result = MacAddressUtils.createRandomUnicastAddress();
             }
         }
+
+        Log.e(TAG, "Calculated randomized MAC " + result + " for " + config.getNetworkKey());
+
         return result;
     }
 
@@ -619,11 +680,36 @@ public class WifiConfigManager {
      * @return the updated MacAddress
      */
     private MacAddress updateRandomizedMacIfNeeded(WifiConfiguration config) {
-        boolean shouldUpdateMac = config.randomizedMacExpirationTimeMs
-                < mClock.getWallClockMillis() || mClock.getWallClockMillis()
-                - config.randomizedMacLastModifiedTimeMs >= NON_PERSISTENT_MAC_REFRESH_MS_MAX;
-        if (!shouldUpdateMac) {
-            return config.getRandomizedMacAddress();
+
+
+        boolean shouldUpdateMac = false;
+
+        /*
+        if (mFrameworkFacade.getIntegerSetting(mContext,
+                BAIKALOS_RESET_PERSISTENT_MAC_FLAG, 0) == 1) {
+
+            Log.e(TAG, "Force randomized MAC renewal");
+
+            mFrameworkFacade.setIntegerSetting(mContext,
+                BAIKALOS_RESET_PERSISTENT_MAC_FLAG, 0);
+
+            String persistentMacString = mRandomizedMacAddressMapping.get(
+                config.getNetworkKey());
+
+            if (persistentMacString != null) {
+                mRandomizedMacAddressMapping.remove(config.getNetworkKey());
+            }
+
+            shouldUpdateMac = true;
+        }*/
+
+        if( !shouldUpdateMac ) {
+            shouldUpdateMac = config.randomizedMacExpirationTimeMs
+                    < mClock.getWallClockMillis() || mClock.getWallClockMillis()
+                    - config.randomizedMacLastModifiedTimeMs >= NON_PERSISTENT_MAC_REFRESH_MS_MAX;
+            if (!shouldUpdateMac) {
+                return config.getRandomizedMacAddress();
+            }
         }
         WifiConfiguration internalConfig = getInternalConfiguredNetwork(config.networkId);
         setRandomizedMacAddress(internalConfig, MacAddressUtils.createRandomUnicastAddress());
@@ -4274,4 +4360,5 @@ public class WifiConfigManager {
         }
         return new ArrayList<>(results);
     }
+
 }

@@ -338,6 +338,8 @@ public class ScanRequestProxy {
         return scanRequestTimestamps;
     }
 
+    
+
     /**
      * Checks if the scan request from the app (specified by packageName) needs
      * to be throttled.
@@ -346,6 +348,10 @@ public class ScanRequestProxy {
      */
     private boolean shouldScanRequestBeThrottledForForegroundApp(
             int callingUid, String packageName) {
+        Log.e(TAG, "shouldScanRequestBeThrottledForForegroundApp:" + packageName + ", callingUid=" + callingUid);
+        if( !shouldScanRequestBeThrottledForAppProfile(packageName) ) {
+            return false;
+        }
         if (isPackageNameInExceptionList(packageName, true)) {
             return false;
         }
@@ -384,6 +390,10 @@ public class ScanRequestProxy {
      * Checks if the scan request from a background app needs to be throttled.
      */
     private boolean shouldScanRequestBeThrottledForBackgroundApp(String packageName) {
+        Log.e(TAG, "shouldScanRequestBeThrottledForBackgroundApp:" + packageName);
+        if( !shouldScanRequestBeThrottledForAppProfile(packageName) ) {
+            return false;
+        }
         if (isPackageNameInExceptionList(packageName, false)) {
             return false;
         }
@@ -409,6 +419,25 @@ public class ScanRequestProxy {
             Log.e(TAG, "Failed to check the app state", e);
             return ActivityManager.RunningAppProcessInfo.IMPORTANCE_GONE;
         }
+    }
+
+    private int getBaikalLocationMode(String packageName) {
+        try {
+            return mActivityManager.getBaikalPackageOption(packageName,-1,0,0);
+        } catch (SecurityException e) {
+            Log.e(TAG, "Failed to check baikal location mode", e);
+            return -1;
+        }
+    }
+
+    private boolean shouldScanRequestBeThrottledForAppProfile(String packageName) {
+        int level = getBaikalLocationMode(packageName);
+        switch(level) {
+            case 1:
+            case 2:
+                return false;
+        }
+        return true;
     }
 
     /**

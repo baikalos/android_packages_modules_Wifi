@@ -35,7 +35,7 @@ import java.util.Objects;
  */
 final class MemoryStoreImpl implements WifiScoreCard.MemoryStore {
     private static final String TAG = "WifiMemoryStoreImpl";
-    private static final boolean DBG = true;
+    private static final boolean DBG = false;
 
     // The id of the client that stored this data
     public static final String WIFI_FRAMEWORK_IP_MEMORY_STORE_CLIENT_ID = "com.android.server.wifi";

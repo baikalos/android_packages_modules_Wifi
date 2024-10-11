@@ -89,11 +89,15 @@ public class MacAddressUtil {
     }
 
     private Mac obtainMacRandHashFunctionInternal(int uid, String alias) {
+        return obtainMacRandHashFunctionInternal(uid,alias,false);
+    }
+
+    private Mac obtainMacRandHashFunctionInternal(int uid, String alias, boolean force) {
         try {
             KeyStore keyStore = AndroidKeyStoreProvider.getKeyStoreForUid(uid);
             // tries to retrieve the secret, and generate a new one if it's unavailable.
             Key key = keyStore.getKey(alias, null);
-            if (key == null) {
+            if (key == null || force) {
                 key = generateAndPersistNewMacRandomizationSecret(uid, alias);
             }
             if (key == null) {
@@ -123,7 +127,11 @@ public class MacAddressUtil {
      * @param uid the UID of the KeyStore to get the secret of the hash function from.
      */
     public Mac obtainMacRandHashFunction(int uid) {
-        return obtainMacRandHashFunctionInternal(uid, MAC_RANDOMIZATION_ALIAS);
+        return obtainMacRandHashFunction(uid,false);
+    }
+
+    public Mac obtainMacRandHashFunction(int uid, boolean force) {
+        return obtainMacRandHashFunctionInternal(uid, MAC_RANDOMIZATION_ALIAS, force);
     }
 
     /**

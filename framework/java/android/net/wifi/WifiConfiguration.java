@@ -1901,6 +1901,7 @@ public class WifiConfiguration implements Parcelable {
             return;
         }
         mRandomizedMacAddress = mac;
+        Log.d(TAG, "setRandomizedMacAddress = " + mac);
     }
 
     /**
