@@ -189,8 +189,15 @@ public class WifiSettingsStore {
 
     /* Does Wi-Fi need to be disabled when airplane mode is on ? */
     private boolean isAirplaneSensitive() {
+
+        boolean baikal = Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_AIRPLANE_DONT_TOGGLE_WIFI, 0) == 1;
+
+        if( baikal ) return false;
+
         String airplaneModeRadios = Settings.Global.getString(mContext.getContentResolver(),
                 Settings.Global.AIRPLANE_MODE_RADIOS);
+
         return airplaneModeRadios == null
                 || airplaneModeRadios.contains(Settings.Global.RADIO_WIFI);
     }

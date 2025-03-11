@@ -432,6 +432,7 @@ public class ScanRequestProxy {
 
     private boolean shouldScanRequestBeThrottledForAppProfile(String packageName) {
         int level = getBaikalLocationMode(packageName);
+        Log.e(TAG, "shouldScanRequestBeThrottledForAppProfile:" + packageName + " level=" + level);        
         switch(level) {
             case 1:
             case 2:
