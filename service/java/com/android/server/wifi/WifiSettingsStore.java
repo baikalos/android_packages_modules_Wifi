@@ -379,15 +379,17 @@ public class WifiSettingsStore {
     public boolean shouldWifiRemainEnabledWhenApmEnabled() {
         return mDeviceConfigFacade.isApmEnhancementEnabled()
                 && isWifiToggleEnabled()
-                && (getUserSecureIntegerSetting(WIFI_APM_STATE,
-                WIFI_TURNS_OFF_IN_APM) == WIFI_REMAINS_ON_IN_APM);
+                && ((getUserSecureIntegerSetting(WIFI_APM_STATE,WIFI_TURNS_OFF_IN_APM) == WIFI_REMAINS_ON_IN_APM) ||
+                    (mFrameworkFacade.getIntegerSetting(mContext.getContentResolver(),Settings.Global.BAIKALOS_AIRPLANE_DONT_TOGGLE_WIFI, 0) == 1));
+
     }
 
     private boolean isBluetoothEnabledOnApm() {
         return mFrameworkFacade.getIntegerSetting(mContext.getContentResolver(),
                 Settings.Global.BLUETOOTH_ON, 0) != 0
-                && getUserSecureIntegerSetting(BLUETOOTH_APM_STATE, BT_TURNS_OFF_IN_APM)
-                == BT_REMAINS_ON_IN_APM;
+                && ((getUserSecureIntegerSetting(BLUETOOTH_APM_STATE, BT_TURNS_OFF_IN_APM) == BT_REMAINS_ON_IN_APM) ||
+                    (mFrameworkFacade.getIntegerSetting(mContext.getContentResolver(),Settings.Global.BAIKALOS_AIRPLANE_DONT_TOGGLE_BT, 0) == 1));
+
     }
 
     synchronized void updateSatelliteModeTracker() {
