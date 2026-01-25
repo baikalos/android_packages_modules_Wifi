@@ -880,8 +880,9 @@ public class DeviceConfigFacade {
      */
     public boolean isApmEnhancementEnabled() {
         // reads the value set by Bluetooth device config for APM enhancement feature flag
-        return Settings.Global.getInt(
-                mContext.getContentResolver(), "apm_enhancement_enabled", 0) == 1;
+        /*return Settings.Global.getInt(
+                mContext.getContentResolver(), "apm_enhancement_enabled", 0) == 1;*/
+        return true; // Always enabled on BaikalOS
     }
 
     /**
